@@ -1,6 +1,5 @@
-import LRU from 'lru-cache';
 import ioredis from 'ioredis';
-import LRUCache from 'lru-cache';
+import QuickLRU, { Options as QLRUOpts } from '@gosquared/quick-lru-cjs';
 
 type Fetcher<T> = (key: string) => Promise<T>;
 interface StashOpts {
@@ -12,14 +11,14 @@ interface StashOpts {
 
 function createLRU(opts: StashOpts) {
   const max = opts.LRUMax || 1000;
-  const LRUOpts: LRUCache.Options<string, any> = { max };
-  return new LRU(LRUOpts);
+  const LRUOpts: QLRUOpts<string, any> = { maxSize: max };
+  return new QuickLRU<string, any>(LRUOpts);
 }
 
 const TEN_MINS_IN_MS = 10 * 60 * 1000;
 
-class Stash {
-  lru: LRU<string, any>;
+export class Stash {
+  lru: QuickLRU<string, any>;
   redis: ioredis.Redis;
   log: (...args: any[]) => void;
   redisTtlMs: number;
@@ -63,7 +62,7 @@ class Stash {
   }
 
   async del(key: string) {
-    this.lru.del(key);
+    this.lru.delete(key);
     await this.redis.del(key);
     return true;
   }
