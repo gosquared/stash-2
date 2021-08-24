@@ -6,7 +6,8 @@
   "scripts": {
     "build": "rm -rf dist && tsc || exit 0",
     "watch": "rm -rf dist && tsc -w",
-    "test": "mocha --exit dist/test"
+    "test": "mocha --exit dist/test",
+    "prepublish": "npm run build"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"
