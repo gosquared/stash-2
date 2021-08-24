@@ -23,7 +23,7 @@ export class Stash {
   log: (...args: any[]) => void;
   redisTtlMs: number;
 
-  constructor(opts: StashOpts) {
+  constructor(opts: StashOpts = {}) {
     this.lru = createLRU(opts);
     if (opts.createRedis) {
       this.redis = opts.createRedis();
