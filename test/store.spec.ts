@@ -1,8 +1,11 @@
 import { spy, stub } from 'sinon';
-import { Stash } from '../src/main';
+import { Stash, StashOpts } from '../src/main';
 import { expect } from 'chai';
 import faker from 'faker';
 import IORedis from 'ioredis';
+
+const redis = new IORedis(6391);
+const createRedis = () => redis;
 
 describe('stashing new value', () => {
   it('should store in lru');
@@ -21,16 +24,17 @@ describe('getting a value', () => {
   it('should save value in lru', async () => {
     const key = faker.datatype.uuid();
     const fetch = async () => 'test';
-    const stash = new Stash();
+    const opts: StashOpts  = { createRedis };
+    const stash = new Stash(opts);
     await stash.get(key, fetch);
     expect(stash.lru.has(key)).equals(true);
   });
   it('should save value in redis', async () => {
     const key = faker.datatype.uuid();
     const fetch = async () => 'test';
-    const stash = new Stash();
+    const opts: StashOpts  = { createRedis };
+    const stash = new Stash(opts);
     await stash.get(key, fetch);
-    const redis = new IORedis();
     const result = await redis.exists(key);
     expect(result).equals(1);
   });

@@ -6,8 +6,12 @@
   "scripts": {
     "build": "rm -rf dist && tsc || exit 0",
     "watch": "rm -rf dist && tsc -w",
+    "pretest": "docker-compose up -d redis",
+    "cleanup": "docker-compose stop && docker-compose rm -f",
+    "posttest": "npm run cleanup",
     "test": "mocha --exit dist/test",
-    "prepublish": "npm run build"
+    "prepublish": "npm run build",
+    "monitor": "docker exec -it stash2-redis redis-cli monitor"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"

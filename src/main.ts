@@ -2,7 +2,7 @@ import ioredis from 'ioredis';
 import QuickLRU, { Options as QLRUOpts } from '@gosquared/quick-lru-cjs';
 
 type Fetcher<T> = (key: string) => Promise<T>;
-interface StashOpts {
+export interface StashOpts {
   createRedis?: () => ioredis.Redis
   LRUMax?: number
   log?: (...args: any[]) => void

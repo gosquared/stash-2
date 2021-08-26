@@ -1,0 +1,6 @@
+services:
+  redis:
+    image: redis:6.2-alpine
+    ports:
+      - 6391:6379
+    container_name: stash2-redis
