@@ -13,9 +13,6 @@
     "prepublish": "npm run build",
     "monitor": "docker exec -it stash2-redis redis-cli monitor"
   },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",
