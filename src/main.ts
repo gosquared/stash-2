@@ -46,10 +46,13 @@ export class Stash {
     value = await this.redis.get(key);
 
     if (!value) {
+      const lockKey = `${key}:lock`;
+      const { unlock } = await this.redlock.lock(lockKey, this.redisTtlMs);
       value = await fetch(key);
       this.lru.set(key, value);
       const stringified = JSON.stringify(value);
       this.redis.psetex(key, this.redisTtlMs, stringified);
+      await unlock();
       return value;
     }
 
