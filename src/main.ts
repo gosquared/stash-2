@@ -1,5 +1,6 @@
 import ioredis from 'ioredis';
 import QuickLRU, { Options as QLRUOpts } from '@gosquared/quick-lru-cjs';
+import Redlock from 'redlock';
 
 type Fetcher<T> = (key: string) => Promise<T>;
 export interface StashOpts {
@@ -22,6 +23,7 @@ export class Stash {
   redis: ioredis.Redis;
   log: (...args: any[]) => void;
   redisTtlMs: number;
+  redlock: Redlock;
 
   constructor(opts: StashOpts = {}) {
     this.lru = createLRU(opts);
@@ -32,6 +34,7 @@ export class Stash {
     }
     this.log = opts.log || (() => {});
     this.redisTtlMs = opts.redisTtlMs || TEN_MINS_IN_MS;
+    this.redlock = new Redlock([ this.redis ]);
   }
 
   async get<T>(key: string, fetch: Fetcher<T>): Promise<T> {
