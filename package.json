@@ -21,7 +21,8 @@
     "@types/chai": "^4.2.21",
     "hashlru": "^2.3.0",
     "ioredis": "^4.27.8",
-    "lru-cache": "^6.0.0"
+    "lru-cache": "^6.0.0",
+    "redlock": "^4.2.0"
   },
   "devDependencies": {
     "@types/faker": "^5.5.8",
@@ -29,6 +30,7 @@
     "@types/lru-cache": "^5.1.1",
     "@types/mocha": "^9.0.0",
     "@types/node": "^16.7.1",
+    "@types/redlock": "^4.0.2",
     "@types/sinon": "^10.0.2",
     "chai": "^4.3.4",
     "faker": "^5.5.3",
