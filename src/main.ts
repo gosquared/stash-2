@@ -18,6 +18,11 @@ function createLRU(opts: StashOpts) {
 
 const TEN_MINS_IN_MS = 10 * 60 * 1000;
 
+function createRedlock(redis: ioredis.Redis) {
+  const opts = { retryCount: 0 };
+  const redlock = new Redlock([ redis ], opts);
+  return redlock;
+}
 export class Stash {
   lru: QuickLRU<string, any>;
   redis: ioredis.Redis;
@@ -34,7 +39,7 @@ export class Stash {
     }
     this.log = opts.log || (() => {});
     this.redisTtlMs = opts.redisTtlMs || TEN_MINS_IN_MS;
-    this.redlock = new Redlock([ this.redis ]);
+    this.redlock = createRedlock(this.redis);
   }
 
   async get<T>(key: string, fetch: Fetcher<T>): Promise<T> {
