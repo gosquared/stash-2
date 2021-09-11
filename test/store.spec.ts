@@ -10,6 +10,22 @@ const redis = new IORedis(6391);
 const createRedis = () => redis;
 const clearRedis = () => redis.flushall();
 
+
+describe('redis', () => {
+  before(clearRedis);
+  it('getting nonexistent key', async () => {
+    const key = faker.datatype.uuid();
+    const result = await redis.get(key);
+    expect(result).to.be.null;
+  })
+  it('getting empty key', async () => {
+    const key = faker.datatype.uuid();
+    await redis.set(key, '');
+    const result = await redis.get(key);
+    expect(result).equals('');
+  })
+});
+
 describe('stashing new value', () => {
   it('should store in lru');
   it('should store in redis');
