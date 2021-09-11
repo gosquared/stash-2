@@ -1,9 +1,11 @@
 import { spy, stub } from 'sinon';
 import { Stash, StashOpts } from '../src/main';
-import { expect } from 'chai';
+import { expect, use } from 'chai';
+import sinonChai  from 'sinon-chai';
 import faker from 'faker';
 import IORedis from 'ioredis';
 
+use(sinonChai);
 const redis = new IORedis(6391);
 const createRedis = () => redis;
 
