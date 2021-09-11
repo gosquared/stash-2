@@ -32,10 +32,12 @@
     "@types/node": "^16.7.1",
     "@types/redlock": "^4.0.2",
     "@types/sinon": "^10.0.2",
+    "@types/sinon-chai": "^3.2.5",
     "chai": "^4.3.4",
     "faker": "^5.5.3",
     "mocha": "^9.1.0",
     "sinon": "^11.1.2",
+    "sinon-chai": "^3.7.0",
     "typescript": "^4.3.5"
   }
 }
