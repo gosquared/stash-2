@@ -61,23 +61,25 @@ class LockErr extends Error {
   }
 }
 
+const topic = 'stash:invalidations';
+
 export class Stash {
   lru: QuickLRU<string, any>;
   redis: ioredis.Redis;
   log: (...args: any[]) => void;
   redisTtlMs: number;
   redlock: Redlock;
+  broadcast: ioredis.Redis;
 
   constructor(opts: StashOpts = {}) {
+    let createRedis = opts.createRedis || (() => new ioredis());
     this.lru = createLRU(opts);
-    if (opts.createRedis) {
-      this.redis = opts.createRedis();
-    } else {
-      this.redis = new ioredis();
-    }
+    this.redis = createRedis();
+    this.broadcast = createRedis();
     this.log = opts.log || (() => {});
     this.redisTtlMs = opts.redisTtlMs || TEN_MINS_IN_MS;
     this.redlock = createRedlock(this.redis);
+    this.subscribe();
   }
 
   async get<T>(key: string, fetch: Fetcher<T>) {
@@ -120,6 +122,32 @@ export class Stash {
     this.lru.delete(key);
     await this.redis.del(key);
     return true;
+  }
+
+  async invalidate(key: string) {
+    const message = { key };
+    const str = JSON.stringify(message);
+    await this.del(key);
+    this.broadcast.publish(topic, str);
+  }
+
+  subscribe() {
+    const handleMessage = (channel: string, message: string) => {
+      if (channel !== topic) return;
+
+      let msg;
+      try {
+        msg = JSON.parse(message);
+      } catch (e) {
+        return;
+      }
+
+      const key = msg.key;
+      this.lru.delete(key);
+    };
+
+    this.broadcast.on('message', handleMessage);
+    this.broadcast.subscribe(topic);
   }
 }
 
