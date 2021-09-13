@@ -61,6 +61,8 @@ class LockErr extends Error {
   }
 }
 
+const topic = 'stash:invalidations';
+
 export class Stash {
   lru: QuickLRU<string, any>;
   redis: ioredis.Redis;
@@ -77,6 +79,7 @@ export class Stash {
     this.log = opts.log || (() => {});
     this.redisTtlMs = opts.redisTtlMs || TEN_MINS_IN_MS;
     this.redlock = createRedlock(this.redis);
+    this.subscribe();
   }
 
   async get<T>(key: string, fetch: Fetcher<T>) {
@@ -119,6 +122,25 @@ export class Stash {
     this.lru.delete(key);
     await this.redis.del(key);
     return true;
+  }
+
+  subscribe() {
+    const handleMessage = (channel: string, message: string) => {
+      if (channel !== topic) return;
+
+      let msg;
+      try {
+        msg = JSON.parse(message);
+      } catch (e) {
+        return;
+      }
+
+      const key = msg.key;
+      this.lru.delete(key);
+    };
+
+    this.broadcast.on('message', handleMessage);
+    this.broadcast.subscribe(topic);
   }
 }
 
