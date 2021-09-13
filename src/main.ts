@@ -67,14 +67,13 @@ export class Stash {
   log: (...args: any[]) => void;
   redisTtlMs: number;
   redlock: Redlock;
+  broadcast: ioredis.Redis;
 
   constructor(opts: StashOpts = {}) {
+    let createRedis = opts.createRedis || (() => new ioredis());
     this.lru = createLRU(opts);
-    if (opts.createRedis) {
-      this.redis = opts.createRedis();
-    } else {
-      this.redis = new ioredis();
-    }
+    this.redis = createRedis();
+    this.broadcast = createRedis();
     this.log = opts.log || (() => {});
     this.redisTtlMs = opts.redisTtlMs || TEN_MINS_IN_MS;
     this.redlock = createRedlock(this.redis);
