@@ -1,5 +1,6 @@
 import ioredis from 'ioredis';
 import QuickLRU, { Options as QLRUOpts } from '@gosquared/quick-lru-cjs';
+import Redlock from 'redlock';
 
 type Fetcher<T> = (key: string) => Promise<T>;
 export interface StashOpts {
@@ -17,11 +18,55 @@ function createLRU(opts: StashOpts) {
 
 const TEN_MINS_IN_MS = 10 * 60 * 1000;
 
+function createRedlock(redis: ioredis.Redis) {
+  const opts = { retryCount: 0 };
+  const redlock = new Redlock([ redis ], opts);
+  return redlock;
+}
+
+async function getCached<T>(
+  key: string,
+  lru: QuickLRU<string, any>,
+  redis: ioredis.Redis,
+  log: (...args: any[]) => void,
+): Promise<T | undefined | null | string> {
+  let value: string | undefined | null | T = lru.get(key);
+  if (value) {
+    return value;
+  }
+
+  value = await redis.get(key);
+
+  if (!value) return value;
+
+  try {
+    value = JSON.parse(value);
+  } catch (e) {
+    log('json parse error', e.stack);
+    throw e;
+  }
+
+  return value;
+}
+
+function wait(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+class LockErr extends Error {
+  info: any;
+  constructor(info: any) {
+    super('Could not acquire lock');
+    this.info = info;
+  }
+}
+
 export class Stash {
   lru: QuickLRU<string, any>;
   redis: ioredis.Redis;
   log: (...args: any[]) => void;
   redisTtlMs: number;
+  redlock: Redlock;
 
   constructor(opts: StashOpts = {}) {
     this.lru = createLRU(opts);
@@ -32,32 +77,42 @@ export class Stash {
     }
     this.log = opts.log || (() => {});
     this.redisTtlMs = opts.redisTtlMs || TEN_MINS_IN_MS;
+    this.redlock = createRedlock(this.redis);
   }
 
-  async get<T>(key: string, fetch: Fetcher<T>): Promise<T> {
-    let value: string | undefined | null | T = this.lru.get(key);
-    if (value) {
-      return value;
+  async get<T>(key: string, fetch: Fetcher<T>) {
+    const lockKey = `${key}:lock`;
+    const _getCached = () => getCached<T>(key, this.lru, this.redis, this.log);
+    const setLock = () => this.redlock.lock(lockKey, this.redisTtlMs);
+    let attempts = 0;
+    let waitMs = 200;
+    let lock;
+    let value = await _getCached();
+
+    while (!value && !lock) {
+      try {
+        lock = await setLock();
+      } catch (err) {
+        attempts += 1;
+        if (attempts === 5) {
+          const info = { redlockErr: err, attempts };
+          throw new LockErr(info);
+        }
+        await wait(waitMs);
+        value = await _getCached();
+        continue;
+      }
     }
 
-    value = await this.redis.get(key);
-
-    if (!value) {
+    if (lock) {
       value = await fetch(key);
       this.lru.set(key, value);
       const stringified = JSON.stringify(value);
-      this.redis.psetex(key, this.redisTtlMs, stringified);
-      return value;
+      await this.redis.psetex(key, this.redisTtlMs, stringified);
+      this.lru.set(key, value);
+      await lock.unlock();
     }
 
-    try {
-      value = JSON.parse(value);
-    } catch (e) {
-      this.log('json parse error', e.stack);
-      throw e;
-    }
-
-    this.lru.set(key, value);
     return value;
   }
 

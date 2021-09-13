@@ -16,3 +16,10 @@ npm i
 npm run watch
 npm test
 ```
+
+```bash
+docker-compose up -d redis
+npm run watch
+npx mocha --exit dist/test
+npm run cleanup
+```
