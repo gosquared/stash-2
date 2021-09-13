@@ -124,6 +124,13 @@ export class Stash {
     return true;
   }
 
+  async invalidate(key: string) {
+    const message = { key };
+    const str = JSON.stringify(message);
+    await this.del(key);
+    this.broadcast.publish(topic, str);
+  }
+
   subscribe() {
     const handleMessage = (channel: string, message: string) => {
       if (channel !== topic) return;
